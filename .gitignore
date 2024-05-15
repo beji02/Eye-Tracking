@@ -1,0 +1,9 @@
+/l2cs_modified
+preprocess.py
+playground.py
+/venv
+*__pycache__
+/gaze_estimation/experiments
+/gaze_estimation/wandb
+/gaze_estimation/venv
+/venv_l2cs_modified
