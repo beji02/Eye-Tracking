@@ -48,6 +48,7 @@ def gaze3dTo2dCoordinates_with_calib(gaze):
 
 
 def gaze3dTo2dCoordinates_custom(gaze):
+    print(gaze)
     origin = np.array(
         [0, 0, 500]
     )  # 500: distanta fata-camera, first 0: distanta spre stg/dr, second 0: distanta sus jos
@@ -63,30 +64,38 @@ def gaze3dTo2dCoordinates_custom(gaze):
 
     gaze[1] = -gaze[1]
     const_for_gaze_line_with_screen_plane_eq = -origin[2] / gaze[2]
-    print(const_for_gaze_line_with_screen_plane_eq)
+    # print(const_for_gaze_line_with_screen_plane_eq)
     x_mm_intersection_gaze_line_with_screen_plane = (
         const_for_gaze_line_with_screen_plane_eq * gaze[0]
     )
-    print(x_mm_intersection_gaze_line_with_screen_plane)
+    # print(x_mm_intersection_gaze_line_with_screen_plane)
     y_mm_intersection_gaze_line_with_screen_plane = (
         const_for_gaze_line_with_screen_plane_eq * gaze[1]
     )
-    print(y_mm_intersection_gaze_line_with_screen_plane)
+    
+    print("Xmm:", x_mm_intersection_gaze_line_with_screen_plane)
+    print("Ymm:", y_mm_intersection_gaze_line_with_screen_plane)   
 
-    x_mm = x_mm_intersection_gaze_line_with_screen_plane + tvec[0]
-    print(x_mm)
-    y_mm = y_mm_intersection_gaze_line_with_screen_plane + tvec[1]
-    print(y_mm)
+    # print(y_mm_intersection_gaze_line_with_screen_plane)
+
+
+    x_mm = x_mm_intersection_gaze_line_with_screen_plane*2 + tvec[0]
+    # print(x_mm)
+    y_mm = y_mm_intersection_gaze_line_with_screen_plane*2 + tvec[1]
+    # print(y_mm)
     x_mm = rmat[0][0] * x_mm
-    print(x_mm)
+    # print(x_mm)
     y_mm = rmat[1][1] * y_mm
-    print(y_mm)
+    # print(y_mm)
 
     x_pixel = x_mm * w_ratio
     y_pixel = y_mm * h_ratio
 
-    x_pixel = x_pixel * (1 + 2*abs(x_pixel - w_pixel/2)/w_pixel)
-    y_pixel = y_pixel + (1 + 2*abs(y_pixel - h_pixel/2)/w_pixel)
+    # x_pixel = x_pixel * (1 + 2*abs(x_pixel - w_pixel/2)/w_pixel)
+    # y_pixel = y_pixel + (1 + 2*abs(y_pixel - h_pixel/2)/w_pixel)
+
+    print("Xpixel:", x_pixel)
+    print("Ypixel:", y_pixel)
 
     return (x_pixel, y_pixel)
 

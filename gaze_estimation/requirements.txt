@@ -8,6 +8,7 @@ contourpy==1.2.1
 cycler==0.12.1
 devtools==0.12.2
 docker-pycreds==0.4.0
+exceptiongroup==1.2.1
 executing==2.0.1
 face-detection==1.0.5
 filelock==3.13.1
@@ -16,6 +17,7 @@ fsspec==2024.2.0
 gitdb==4.0.11
 GitPython==3.1.43
 idna==3.7
+iniconfig==2.0.0
 Jinja2==3.1.3
 kiwisolver==1.4.5
 l2cs @ git+https://github.com/edavalosanaya/L2CS-Net.git@4a0f978d5b4c426a7d37022d8c927d6ea031dcb6
@@ -40,6 +42,7 @@ opencv-python==4.9.0.80
 packaging==24.0
 pandas==2.2.2
 pillow==10.3.0
+pluggy==1.5.0
 protobuf==4.25.3
 psutil==5.9.8
 pydantic==2.7.1
@@ -49,6 +52,7 @@ pyparsing==3.1.2
 PyQt5==5.15.10
 PyQt5-Qt5==5.15.2
 PyQt5-sip==12.13.0
+pytest==8.2.2
 python-dateutil==2.9.0.post0
 pytz==2024.1
 PyYAML==6.0.1
@@ -59,6 +63,7 @@ setproctitle==1.3.3
 six==1.16.0
 smmap==5.0.1
 sympy==1.12
+tomli==2.0.1
 torch==2.3.0+cu118
 torchaudio==2.3.0+cu118
 torchvision==0.18.0+cu118

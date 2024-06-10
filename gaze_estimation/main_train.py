@@ -318,6 +318,8 @@ def add_visual_evaluation_wandb_for_resnet(config, test_dataloader, device, mode
     ).to(
         device
     )  # Assuming the data is the first element
+    # print(all_gaze_truth[0].shape)
+    # print(all_gaze_truth[0])
 
     gaze_pitch, gaze_yaw = model(input_images)
 
@@ -343,6 +345,8 @@ def add_visual_evaluation_wandb_for_resnet(config, test_dataloader, device, mode
     all_gaze_predicted = [
         (pitch, gaze) for pitch, gaze in zip(pitch_predicted, yaw_predicted)
     ]
+    # print(all_gaze_truth[0].shape)
+    # print(all_gaze_truth[0])
 
     # Create a figure and axes for subplots
     fig, axes = plt.subplots(3, 4, figsize=(12, 9))
@@ -410,6 +414,8 @@ def add_visual_evaluation_wandb_for_mobilenet(test_dataloader, device, model):
     ).to(
         device
     )  # Assuming the data is the first element
+    # print(all_gaze_truth[0].shape)
+    # print(all_gaze_truth[0])
 
     predictions = model(input_images)
 
@@ -419,12 +425,14 @@ def add_visual_evaluation_wandb_for_mobilenet(test_dataloader, device, model):
     label_pitch = all_gaze_truth[:, 0].float() * np.pi / 180
     label_yaw = all_gaze_truth[:, 1].float() * np.pi / 180
 
-    gaze_truth = [
+    all_gaze_truth = [
         (pitch, gaze) for pitch, gaze in zip(label_pitch, label_yaw)
     ]
     all_gaze_predicted = [
         (pitch, gaze) for pitch, gaze in zip(pred_pitch, pred_yaw)
     ]
+    # print(all_gaze_truth[0].shape)
+    # print(all_gaze_truth[0])
 
     # Create a figure and axes for subplots
     fig, axes = plt.subplots(3, 4, figsize=(12, 9))
@@ -893,7 +901,7 @@ def main():
         [i for i in range(15)]
         if config.data.folding_strategy == 0
         #else [random.randint(1, 15) - 1]
-        else [11]
+        else [10]
     )
     setup_experiment_output_dir(experiment_path, folds)
 

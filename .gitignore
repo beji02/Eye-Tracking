@@ -3,7 +3,9 @@ preprocess.py
 playground.py
 /venv
 *__pycache__
-/gaze_estimation/experiments
+/gaze_estimation/experiments/*
 /gaze_estimation/wandb
 /gaze_estimation/venv
 /venv_l2cs_modified
+/gaze_estimation/demo/output/*
+gaze_estimation/demo/test_images/*

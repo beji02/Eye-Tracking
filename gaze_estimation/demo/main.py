@@ -15,6 +15,7 @@ import time
 from gui.camera import Camera
 import random
 from gaze_utils.gaze_utils import gazeto3d, gazeto3d_demo, gaze3dTo2dCoordinates, gaze3dTo2dCoordinates_custom, gaze3dTo2dCoordinates_with_calib
+import time
 
 def get_experiment_path(args):
     experiment_path = args.experiment_path
@@ -59,6 +60,60 @@ def display_canvas(canvas):
     cv2.setWindowProperty("Canvas", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
     cv2.imshow("Canvas", canvas)
 
+def run_preview_on_camera_feed(args, model):
+    camera_identifier = get_camera_identifier(args)
+    camera = Camera(camera_identifier)
+    while True:
+        image = camera.get_current_frame()
+        if image is not None:
+            
+            eye_positions, gaze = model.forward(image)
+            print("FPS gaze estimator:", model.get_fps())
+            print("FPS of face detector:", model.get_fps_face_detector())
+
+            gaze_3d = gazeto3d(gaze)
+            if gaze is not None:
+                image = add_gaze_to_image(image, eye_positions, gaze)
+            image = transform_image_from_numpy_rgb_chw_to_cv2_format(image)
+            cv2.imshow("Demo", image)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+    camera.close()
+
+def run_preview_on_image_input(image_path, model):
+    image = cv2.imread(image_path)
+    image = transform_image_from_cv2_format_to_numpy_rgb_chw(image)
+    
+    eye_positions, gaze = model.forward(image)
+    print("FPS gaze estimator:", model.get_fps())
+
+    gaze_3d = gazeto3d(gaze)
+    y, x = gaze3dTo2dCoordinates(gaze_3d)
+    image = add_gaze_to_image(image, eye_positions, gaze)
+    image = transform_image_from_numpy_rgb_chw_to_cv2_format(image)
+    cv2.imwrite(str(Path(os.getcwd()) / "demo" / "output" / "image_with_gaze.jpg"), image)
+
+def run_canvas_on_camera_feed(args, model):
+    camera_identifier = get_camera_identifier(args)
+    camera = Camera(camera_identifier)
+    while True:
+        image = camera.get_current_frame()
+        if image is not None:
+            canvas = create_white_canvas()
+            _, gaze = model.forward(image)
+            print("FPS gaze estimator:", model.get_fps())
+            if gaze is not None:
+                gaze_3d = gazeto3d(gaze)
+                # print("Gaze 3d:", gaze_3d)
+                y, x = gaze3dTo2dCoordinates_custom(gaze_3d)
+                draw_red_dot(canvas, int(x), int(y))
+            
+            display_canvas(canvas)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                cv2.destroyAllWindows()
+                break
+    camera.close()
+
 def main():
     args = parse_demo_args()
     experiment_path = get_experiment_path(args)
@@ -68,60 +123,12 @@ def main():
 
     if args.demo_type == "preview":
         if image_path is None:
-            camera_identifier = get_camera_identifier(args)
-            camera = Camera(camera_identifier)
-            while True:
-                image = camera.get_current_frame()
-                if image is not None:
-                    eye_positions, gaze = model.forward(image)
-                    print(gaze)
-                    gaze_3d = gazeto3d(gaze)
-                    print("Gaze 3d:", gaze_3d)
-                    if gaze is not None:
-                        image = add_gaze_to_image(image, eye_positions, gaze)
-                    image = transform_image_from_numpy_rgb_chw_to_cv2_format(image)
-                    cv2.imshow("Demo", image)
-                    if cv2.waitKey(1) & 0xFF == ord('q'):
-                        break
-            camera.close()
+            run_preview_on_camera_feed(args, model)
         else:
-            image = cv2.imread(image_path)
-            image = transform_image_from_cv2_format_to_numpy_rgb_chw(image)
-            eye_positions, gaze = model.forward(image)
-            print("Gaze yaw/pitch:", gaze)
-            gaze_3d = gazeto3d(gaze)
-            print("Gaze 3d:", gaze_3d)
-            y, x = gaze3dTo2dCoordinates(gaze_3d)
-            print("Gaze 2d:", y, x)
-            image = add_gaze_to_image(image, eye_positions, gaze)
-            image = transform_image_from_numpy_rgb_chw_to_cv2_format(image)
-            cv2.imwrite(str(Path(os.getcwd()) / "demo" / "output" / "image_with_gaze.jpg"), image)
+            run_preview_on_image_input(image_path, model)
     elif args.demo_type == "canvas":
         if image_path is None:
-            camera_identifier = get_camera_identifier(args)
-            camera = Camera(camera_identifier)
-            while True:
-                image = camera.get_current_frame()
-                if image is not None:
-                    canvas = create_white_canvas()
-                    _, gaze = model.forward(image)
-                    if gaze is not None:
-                        
-                        gaze_3d = gazeto3d(gaze)
-                        print("Gaze 3d:", gaze_3d)
-                        y, x = gaze3dTo2dCoordinates_custom(gaze_3d)
-                        
-                        print(x, y)
-                        # x, y = get_screen_coordinates_from_gaze(gaze)
-                        # x = random.randint(0, canvas.shape[1])
-                        # y = random.randint(0, canvas.shape[0])
-                        draw_red_dot(canvas, int(x), int(y))
-                    
-                    display_canvas(canvas)
-                    if cv2.waitKey(1) & 0xFF == ord('q'):
-                        cv2.destroyAllWindows()
-                        break
-            camera.close()
+            run_canvas_on_camera_feed(args, model)
 
 
 

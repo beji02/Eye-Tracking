@@ -4,6 +4,8 @@ import random
 import threading
 from gui.Singleton import SingletonABC
 from pathlib import Path
+import time
+from gaze_utils.gaze_utils import gazeto3d, gaze3dTo2dCoordinates_custom
 
 '''
 predicts yaw and pitch of eye gaze based on an image of a person
@@ -13,29 +15,42 @@ output:
 np.ndarray - an array with two float values representing yaw and gaze
 '''
 class GazePredictor(SingletonABC):
-    def _initialize(self):
-        camera_identifier = "192.168.1.9"
+    def _initialize(self, camera_identifier, experiment_path):
         self._camera = Camera(f"http://{camera_identifier}:8000/")
-        experiment_path = Path("/home/deiubejan/Thesis/MyWork/MPIIGaze/gaze_estimation/experiments/test_poti_sa_te_joci")
+        experiment_path = Path(experiment_path)
         self._model = Model(experiment_path)
         self._lock = threading.Lock()
+
+    def get_gaze_estimator_fps(self):
+        self._lock.acquire()
+        fps = self._model.get_fps()
+        self._lock.release()
+        return fps
 
     def get_on_screen_prediction(self):
         self._lock.acquire()
         image = self._camera.get_current_frame()
-        prediction = self._model.forward(image)
-        prediction = self.process_prediction_for_screen_display(prediction)
-        # print(prediction)
+        gaze = None
+        if image is not None:
+            prediction = self._model.forward(image)
+            if prediction is not None:
+                _, gaze = prediction
+                gaze_3d = gazeto3d(gaze)
+                # print("Gaze 3d:", gaze_3d)
+                y, x = gaze3dTo2dCoordinates_custom(gaze_3d)
+                # print(y, x)
+                y, x = int(y), int(x)
+                gaze = (y, x)
         self._lock.release()
-        return prediction
+        return gaze
     
     def get_gaze_vector_prediction(self):
         self._lock.acquire()
         image = self._camera.get_current_frame()
+        prediction = None
         if image is not None:
             prediction = self._model.forward(image)
-        else:
-            prediction = None
+        # print(prediction)
         # prediction = self.process_prediction_for_screen_display(prediction)
         self._lock.release()
         return prediction
@@ -51,6 +66,10 @@ class GazePredictor(SingletonABC):
     
     def _destruct(self) -> None:
         self._camera.close()
+
+    @classmethod
+    def _reset_instance(cls):
+        cls._instance = None
 
 # gaze_pred = GazePredictor()
 # import time

@@ -15,16 +15,16 @@ from torch.utils.data import DataLoader
 from face_detection import RetinaFace
 import cv2
 import matplotlib.pyplot as plt
-
+import time
+from demo.model_with_timer import ModelWithTimer, ITimer
 
 class GazeEstimationModelWithResnet():
-    def __init__(self, experiment_path) -> None:
-        self._experiment_path = experiment_path
-        self._config = load_config(self._experiment_path)
-        self._device = setup_device(self._config)
+    def __init__(self, config: Config) -> None:
+        self._config = config
+        self._device = setup_device(config)
         self._model = create_L2CS_model(arch=self._config.model.backbone, bin_count=self._config.model.bins, device=self._device)
 
-        self._model.load_state_dict(torch.load(self._experiment_path / "output" / "models" / "fold_10" / "model.pkl", map_location=self._device), strict=True)
+        self._model.load_state_dict(torch.load(self._config.experiment_path / "output" / "models" / "fold_10" / "model.pkl", map_location=self._device), strict=True)
         self._model.to(self._device)
         self._model.eval()
 
@@ -33,6 +33,9 @@ class GazeEstimationModelWithResnet():
 
         idx_tensor = [idx for idx in range(self._config.model.bins)]
         self._idx_tensor = torch.FloatTensor(idx_tensor).cuda(self._device)
+
+        self._inference_total_time = 0
+        self._no_inferences = 0
 
     def forward(self, image: np.ndarray) -> np.ndarray:
         image = image.transpose(1, 2, 0)
@@ -43,7 +46,14 @@ class GazeEstimationModelWithResnet():
             images = torch.unsqueeze(dataset[0], dim=0)
             images = Variable(images).cuda(self._device)
             
+            start_time = time.time()
             gaze_pitch, gaze_yaw = self._model(images)
+            end_time = time.time()
+            execution_time = end_time - start_time
+            self._inference_total_time += execution_time
+            self._no_inferences += 1
+            # print(f"(BETTER MODEL) Inference average time: {self._inference_total_time / self._no_inferences}s") 
+            # print(f"No inferences: {self._no_inferences}")
 
             pitch_predicted = self._softmax(gaze_pitch)
             yaw_predicted = self._softmax(gaze_yaw)
@@ -56,21 +66,21 @@ class GazeEstimationModelWithResnet():
             yaw_predicted = yaw_predicted * np.pi / 180
         
         return (pitch_predicted, yaw_predicted)
-    
-
 
 class GazeEstimationModelWithMobilenet():
-    def __init__(self, experiment_path) -> None:
-        self._experiment_path = experiment_path
-        self._config = load_config(self._experiment_path)
+    def __init__(self, config) -> None:
+        self._config = config
         self._device = setup_device(self._config)
         self._model = MobileNet()
-        self._model.load_state_dict(torch.load(self._experiment_path / "output" / "models" / "fold_10" / "model.pkl", map_location=self._device), strict=True)
+        self._model.load_state_dict(torch.load(self._config.experiment_path / "output" / "models" / "fold_10" / "model.pkl", map_location=self._device), strict=True)
         self._model.to(self._device)
         self._model.eval()
 
         self._softmax = nn.Softmax(dim=1).cuda(self._device)
         self._data_transformations = create_mobileNetV2_transformations()
+
+        self._inference_total_time = 0
+        self._no_inferences = 0
 
     def forward(self, image: np.ndarray) -> np.ndarray:
         image = image.transpose(1, 2, 0)
@@ -80,13 +90,20 @@ class GazeEstimationModelWithMobilenet():
         with torch.no_grad():
             images = torch.unsqueeze(dataset[0], dim=0)
             images = Variable(images).cuda(self._device)
+
+            start_time = time.time()
             predictions = self._model(images)
-            
+            end_time = time.time()
+            execution_time = end_time - start_time
+            self._inference_total_time += execution_time
+            self._no_inferences += 1
+            # print(f"(BETTER MODEL) Inference average time: {self._inference_total_time / self._no_inferences}s") 
+            # print(f"No inferences: {self._no_inferences}")
+
             pred_pitch = predictions[:, 0].cpu() * np.pi / 180
             pred_yaw = predictions[:, 1].cpu() * np.pi / 180
 
         return (pred_pitch, pred_yaw)
-
 
 class FaceDetectionModel():
     def __init__(self):
@@ -117,16 +134,34 @@ class FaceDetectionModel():
 
         return cropped_face, eye_positions
 
-class CombinedModel():
+class CombinedModel(ITimer):
     def __init__(self, experiment_path):
         self._face_detector = FaceDetectionModel()
-        self._gaze_estimator = GazeEstimationModelWithMobilenet(experiment_path)
+
+        self._config = load_config(experiment_path)
+        if self._config.model.backbone.startswith("ResNet"):
+            self._gaze_estimator = GazeEstimationModelWithResnet(self._config)
+        elif self._config.model.backbone.startswith("MobileNet"):
+            self._gaze_estimator = GazeEstimationModelWithMobilenet(self._config)
+
+        self._face_detector = ModelWithTimer(self._face_detector)
+        self._gaze_estimator = ModelWithTimer(self._gaze_estimator)
+        # total_params = sum(p.numel() for p in self._gaze_estimator._model.parameters())
+        # print(total_params)
+
+    def get_fps(self):
+        return self._gaze_estimator.get_fps()
+    
+    def get_fps_face_detector(self):
+        return self._face_detector.get_fps()
 
     def forward(self, image: np.ndarray):
         cropped_face, eye_positions = self._face_detector.forward(image)
         gaze = None
         if cropped_face is not None:
             gaze = self._gaze_estimator.forward(cropped_face)
+        if eye_positions is None:
+            return None
         return eye_positions, gaze
 
         

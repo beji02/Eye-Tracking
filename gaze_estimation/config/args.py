@@ -13,6 +13,18 @@ def parse_experiment_args():
     args = parser.parse_args()
     return args
 
+def parse_gui_args():
+    parser = argparse.ArgumentParser(description="GUI for gaze estimation.")
+    parser.add_argument(
+        "-camera_identifier",
+        dest="camera_identifier",
+        help="IP or integer representing camera identifier.",
+        type=str,
+        default=None
+    )
+    args = parser.parse_args()
+    return args
+
 def parse_demo_args():
     parser = argparse.ArgumentParser(description="Demo script for gaze estimation.")
     parser.add_argument(

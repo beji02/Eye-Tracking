@@ -6,6 +6,7 @@ from PyQt5.QtWidgets import (
     QPushButton,
     QVBoxLayout,
     QWidget,
+    QLabel
 )
 from PyQt5 import QtGui
 import sys
@@ -25,33 +26,49 @@ import matplotlib.pyplot as plt
 from gui.camera import Camera
 from gui.gui_windows.ProducerWorker import ProducerWorker
 from demo.visualize import add_gaze_to_image
-
+from PyQt5.QtGui import QFont, QColor
 
 class WebcamWindow(QMainWindow):
     newCameraFrameSignal = pyqtSignal(np.ndarray)
     newGazeVectorSignal = pyqtSignal(tuple)
+    newFpsSignal = pyqtSignal(float)
     windowClosedSignal = pyqtSignal()
 
-    def __init__(self):
+    def __init__(self, camera_identifier, experiment_path):
         super().__init__()
+        self._camera_identifier = camera_identifier
+        self._experiment_path = experiment_path
         self._camera_frame = None
         self._gaze_vector = None
+        self._fps = None
         self.newCameraFrameSignal.connect(self.setCameraFrame)
         self.newGazeVectorSignal.connect(self.setGazeVector)
+        self.newFpsSignal.connect(self.setFps)
+
+        self.fps_label = QLabel("", self)
+        self.fps_label.setFont(QFont('Arial', 40))
+        self.fps_label.setStyleSheet('color: green')
+        self.fps_label.move(100, 10)
 
         self.startCameraFrameProducer()
         self.startGazeVectorProducer()
+        self.startFpsProducer()
 
         self.setWindowTitle("Webcam")
         self.showMaximized()
 
+    def startFpsProducer(self):
+        self._fps_producer_worker = FpsProducerWorker(self._camera_identifier, self._experiment_path, self.newFpsSignal, 1)
+        self._fps_producer_thread = QThread()
+        self.runWorkerOnNewThread(self._fps_producer_worker, self._fps_producer_thread)
+
     def startCameraFrameProducer(self):
-        self._camera_frame_producer_worker = CameraFrameProducerWorker(self.newCameraFrameSignal, 10)
+        self._camera_frame_producer_worker = CameraFrameProducerWorker(self._camera_identifier, self._experiment_path, self.newCameraFrameSignal, 1)
         self._camera_frame_producer_thread = QThread()
         self.runWorkerOnNewThread(self._camera_frame_producer_worker, self._camera_frame_producer_thread)
 
     def startGazeVectorProducer(self):
-        self._gaze_vector_producer_worker = GazeVectorProducerWorker(self.newGazeVectorSignal, 10)
+        self._gaze_vector_producer_worker = GazeVectorProducerWorker(self._camera_identifier, self._experiment_path, self.newGazeVectorSignal, 1)
         self._gaze_vector_producer_thread = QThread()
         self.runWorkerOnNewThread(self._gaze_vector_producer_worker, self._gaze_vector_producer_thread)
 
@@ -67,18 +84,27 @@ class WebcamWindow(QMainWindow):
     def stopGazeVectorProducer(self):
         self._gaze_vector_producer_worker.stopSignal.emit()
         self.stopThread(self._gaze_vector_producer_thread)
+
+    def stopFpsProducer(self):
+        self._fps_producer_worker.stopSignal.emit()
+        self.stopThread(self._fps_producer_thread)
     
     def stopThread(self, thread):
         thread.quit()
         thread.wait()
 
     def setCameraFrame(self, camera_frame: np.ndarray):
-        self._camera_frame = camera_frame
-        self.update()
-    
+        if camera_frame is not None:
+            self._camera_frame = camera_frame
+            self.update()
+        
     def setGazeVector(self, gaze_vector):
-        self._gaze_vector = gaze_vector
-        self.update()
+        if gaze_vector is not None:
+            self._gaze_vector = gaze_vector
+            self.update()
+
+    def setFps(self, fps):
+        self._fps = fps
 
     def drawCameraFrame(self, camera_frame: np.ndarray):
         painter = QPainter(self)
@@ -103,35 +129,32 @@ class WebcamWindow(QMainWindow):
         pixmap = self.ndarray_to_qpixmap(image)
         pixmap = pixmap.scaled(self.size(), Qt.KeepAspectRatio)
         painter.drawPixmap(71, 0, pixmap)
+
+    def drawFps(self, fps: float):
+        self.fps_label.setText(f'Inference avg time: {fps:.5f}')
+        self.fps_label.adjustSize()
   
     def paintEvent(self, event):
         super().paintEvent(event)
         if self._camera_frame is not None:
             self.drawCameraFrame(self._camera_frame)
         if self._gaze_vector is not None:
+            print(self._gaze_vector)
             self.drawGazeVector(self._gaze_vector)
+        if self._fps is not None:
+            self.drawFps(self._fps)
 
     def closeEvent(self, event):
         self.stopCameraFrameProducer()
         self.stopGazeVectorProducer()
+        self.stopFpsProducer()
         self.windowClosedSignal.emit()
         event.accept()
 
-# class CameraFrameProducerWorker(ProducerWorker):
-#     def __init__(self, *args):
-#         super().__init__(*args)
-#         camera_identifier = "192.168.1.9"
-#         self._camera = Camera(f"http://{camera_identifier}:8000/")
-#         self.stopSignal.connect(self._camera.close)
-
-#     def _produce(self):
-#         camera_frame = self._camera.get_current_frame()
-#         return camera_frame
-
 class CameraFrameProducerWorker(ProducerWorker):
-    def __init__(self, *args):
+    def __init__(self, camera_identifier, experiment_path, *args):
         super().__init__(*args)
-        self._gazePredictor = GazePredictor()
+        self._gazePredictor = GazePredictor(camera_identifier, experiment_path)
         self.stopSignal.connect(self._gazePredictor.close)
 
     def _produce(self):
@@ -140,12 +163,22 @@ class CameraFrameProducerWorker(ProducerWorker):
 
 
 class GazeVectorProducerWorker(ProducerWorker):
-    def __init__(self, *args):
+    def __init__(self, camera_identifier, experiment_path, *args):
         super().__init__(*args)
-        self._gazePredictor = GazePredictor()
+        self._gazePredictor = GazePredictor(camera_identifier, experiment_path)
         self.stopSignal.connect(self._gazePredictor.close)
 
     def _produce(self):
         prediction = self._gazePredictor.get_gaze_vector_prediction()
         return prediction
 
+
+class FpsProducerWorker(ProducerWorker):
+    def __init__(self, camera_identifier, experiment_path, *args):
+        super().__init__(*args)
+        self._gazePredictor = GazePredictor(camera_identifier, experiment_path)
+        self.stopSignal.connect(self._gazePredictor.close)
+
+    def _produce(self):
+        fps = self._gazePredictor.get_gaze_estimator_fps()
+        return fps

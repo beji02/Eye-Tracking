@@ -206,6 +206,21 @@ class MyLoveMobileNet(nn.Module):
         return x
     
 if __name__ == "__main__":
+    print("HELOO")
+    model = MyLoveMobileNet()
+
+    total_params = sum(p.numel() for p in model.parameters())
+    print(f'Total number of parameters: {total_params}')
+
+    model = create_L2CS_model('ResNet50', 28, 'cpu')
+
+    total_params = sum(p.numel() for p in model.parameters())
+    print(f'Total number of parameters: {total_params}')
+
+    model = create_L2CS_model('ResNet18', 28, 'cpu')
+
+    total_params = sum(p.numel() for p in model.parameters())
+    print(f'Total number of parameters: {total_params}')
     # # Create an instance of the model
     # # model = CustomMobileNet()
 
@@ -249,27 +264,27 @@ if __name__ == "__main__":
 
     # print(my_model)
 
-    model = MyLoveMobileNet()
-    print(model)
+    # model = MyLoveMobileNet()
+    # print(model)
 
 
-    x = torch.randn(10, 3, 224, 224)
-    k = 0
-    for layer in model.features:
-        k+=1
-        if k == 10:
-            print(";;;;")
-        print(x.shape)
-        x = layer(x)
-    print("SSSS")
-    print(x.shape)
-    x = nn.functional.adaptive_avg_pool2d(x, (1, 1))
-    print(x.shape)
-    x = torch.flatten(x, 1)
-    for layer in [model.regression]:
-        print(x.shape)
-        x = layer(x)
-    print(x.shape)
+    # x = torch.randn(10, 3, 224, 224)
+    # k = 0
+    # for layer in model.features:
+    #     k+=1
+    #     if k == 10:
+    #         print(";;;;")
+    #     print(x.shape)
+    #     x = layer(x)
+    # print("SSSS")
+    # print(x.shape)
+    # x = nn.functional.adaptive_avg_pool2d(x, (1, 1))
+    # print(x.shape)
+    # x = torch.flatten(x, 1)
+    # for layer in [model.regression]:
+    #     print(x.shape)
+    #     x = layer(x)
+    # print(x.shape)
     # from torch.utils.data import DataLoader, TensorDataset
 
     # # Prepare a simple dataset and dataloader
