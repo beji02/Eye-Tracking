@@ -1,5 +1,9 @@
 https://github.com/user-attachments/assets/619f1e95-1137-4db4-9dde-c2ed3aaf3526
 
+Check out my thesis work - [Eye-Tracking as an Intelligent Human-Computer Interface](https://github.com/beji02/Eye-Tracking/blob/master/Eye-Tracking%20as%20an%20Intelligent%20Human-Computer%20Interface.pdf)
+
+Check out my proposed paper - [FastSightNet - Real-time Eye-Tracking-based Human-Computer Interface](https://github.com/beji02/Eye-Tracking/blob/master/FastSightNet%20-%20Real-time%20Eye-Tracking-based%20Human-Computer%20Interface.pdf)
+
 # Thesis
 
 ## Download Datasets and Models
