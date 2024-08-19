@@ -9,3 +9,5 @@ playground.py
 /venv_l2cs_modified
 /gaze_estimation/demo/output/*
 gaze_estimation/demo/test_images/*
+data_processing_core.py
+data_processing_mpii.pydata_processing_mpiiface.py

@@ -454,17 +454,17 @@ def add_visual_evaluation_wandb_for_mobilenet(test_dataloader, device, model):
         )
         # print(gaze_predicted)
 
-        image_with_gaze_truth = add_gaze_to_image(
-            image, ((112.0, 112.0), (112.0, 112.0)), gaze_truth, color=(0, 0, 255)
-        )
-        image_with_both = add_gaze_to_image(
-            image_with_gaze_truth,
-            ((112.0, 112.0), (112.0, 112.0)),
-            gaze_predicted,
-            color=(255, 0, 0),
-        )
+        # image_with_gaze_truth = add_gaze_to_image(
+        #     image, ((112.0, 112.0), (112.0, 112.0)), gaze_truth, color=(0, 0, 255)
+        # )
+        # image_with_both = add_gaze_to_image(
+        #     image_with_gaze_truth,
+        #     ((112.0, 112.0), (112.0, 112.0)),
+        #     gaze_predicted,
+        #     color=(255, 0, 0),
+        # )
 
-        image_with_both = image_with_both.transpose(1, 2, 0)
+        image_with_both = image.transpose(1, 2, 0)
         image_with_both = cv2.cvtColor(image_with_both, cv2.COLOR_RGB2BGR)
 
         # Calculate subplot position
@@ -700,72 +700,72 @@ def evaluate_mobilenet_on_test(
     sample_counter = 0
 
     logging.info(f"Starting evaluation on test")
-    with torch.no_grad():
-        for i, (images, _, labels) in enumerate(
-            test_dataloader, start=1
-        ):
-            BATCHES_SEEN += 1
-            sample_counter += images.size(0)
-            images = Variable(images).cuda(device)
+    # with torch.no_grad():
+    #     for i, (images, _, labels) in enumerate(
+    #         test_dataloader, start=1
+    #     ):
+    #         BATCHES_SEEN += 1
+    #         sample_counter += images.size(0)
+    #         images = Variable(images).cuda(device)
 
-            predictions = model(images).cpu()
-            pitch_label, yaw_label = torch.split(labels, split_size_or_sections=1, dim=1)
-            pitch_pred, yaw_pred = torch.split(predictions, split_size_or_sections=1, dim=1)
+    #         predictions = model(images).cpu()
+    #         pitch_label, yaw_label = torch.split(labels, split_size_or_sections=1, dim=1)
+    #         pitch_pred, yaw_pred = torch.split(predictions, split_size_or_sections=1, dim=1)
 
-            loss_pitch = criterion(pitch_pred, pitch_label)
-            loss_yaw = criterion(yaw_pred, yaw_label)
-            loss = loss_pitch + loss_yaw
+    #         loss_pitch = criterion(pitch_pred, pitch_label)
+    #         loss_yaw = criterion(yaw_pred, yaw_label)
+    #         loss = loss_pitch + loss_yaw
 
-            angular_error = compute_mobilenet_angular_error(labels, predictions)
+    #         angular_error = compute_mobilenet_angular_error(labels, predictions)
 
-            accumulating_loss_pitch += loss_pitch
-            accumulating_loss_yaw += loss_yaw
-            accumulating_loss += loss
-            accumulating_angular_error += angular_error
+    #         accumulating_loss_pitch += loss_pitch
+    #         accumulating_loss_yaw += loss_yaw
+    #         accumulating_loss += loss
+    #         accumulating_angular_error += angular_error
 
-            if i % 100 == 0:
-                wandb.log(
-                    {
-                        "test_avg_batch_loss_pitch": accumulating_loss_pitch / i,
-                        "test_avg_batch_loss_yaw": accumulating_loss_yaw / i,
-                        "test_avg_batch_loss": accumulating_loss / i,
-                        "test_avg_sample_angular_error": accumulating_angular_error / sample_counter,
-                    },
-                    step=BATCHES_SEEN,
-                )
+    #         if i % 100 == 0:
+    #             wandb.log(
+    #                 {
+    #                     "test_avg_batch_loss_pitch": accumulating_loss_pitch / i,
+    #                     "test_avg_batch_loss_yaw": accumulating_loss_yaw / i,
+    #                     "test_avg_batch_loss": accumulating_loss / i,
+    #                     "test_avg_sample_angular_error": accumulating_angular_error / sample_counter,
+    #                 },
+    #                 step=BATCHES_SEEN,
+    #             )
 
-                logging.info(
-                    "Epoch: [%d/%d], Batch: [%d/%d], Test loss: %.4f, Mae: %.4f"
-                    % (
-                        num_epochs_trained,
-                        config.train.num_epochs,
-                        i,
-                        len(test_dataloader),
-                        accumulating_loss / i,
-                        accumulating_angular_error / sample_counter,
-                    )
-                )
-    wandb.log(
-        {
-            "test_avg_batch_loss_pitch": accumulating_loss_pitch / len(test_dataloader),
-            "test_avg_batch_loss_yaw": accumulating_loss_yaw / len(test_dataloader),
-            "test_avg_batch_loss": accumulating_loss / len(test_dataloader),
-            "test_avg_sample_angular_error": accumulating_angular_error / sample_counter,
-        },
-        step=BATCHES_SEEN,
-    )
+    #             logging.info(
+    #                 "Epoch: [%d/%d], Batch: [%d/%d], Test loss: %.4f, Mae: %.4f"
+    #                 % (
+    #                     num_epochs_trained,
+    #                     config.train.num_epochs,
+    #                     i,
+    #                     len(test_dataloader),
+    #                     accumulating_loss / i,
+    #                     accumulating_angular_error / sample_counter,
+    #                 )
+    #             )
+    # wandb.log(
+    #     {
+    #         "test_avg_batch_loss_pitch": accumulating_loss_pitch / len(test_dataloader),
+    #         "test_avg_batch_loss_yaw": accumulating_loss_yaw / len(test_dataloader),
+    #         "test_avg_batch_loss": accumulating_loss / len(test_dataloader),
+    #         "test_avg_sample_angular_error": accumulating_angular_error / sample_counter,
+    #     },
+    #     step=BATCHES_SEEN,
+    # )
 
-    logging.info(
-        "Epoch: [%d/%d], Batch: [%d/%d], Test loss: %.4f, Mae: %.4f"
-        % (
-            num_epochs_trained,
-            config.train.num_epochs,
-            len(test_dataloader),
-            len(test_dataloader),
-            accumulating_loss / len(test_dataloader),
-            accumulating_angular_error / sample_counter,
-        )
-    )
+    # logging.info(
+    #     "Epoch: [%d/%d], Batch: [%d/%d], Test loss: %.4f, Mae: %.4f"
+    #     % (
+    #         num_epochs_trained,
+    #         config.train.num_epochs,
+    #         len(test_dataloader),
+    #         len(test_dataloader),
+    #         accumulating_loss / len(test_dataloader),
+    #         accumulating_angular_error / sample_counter,
+    #     )
+    # )
     add_visual_evaluation_wandb_for_mobilenet(test_dataloader, device, model)
 
 def train_mobilenet_one_epoch(

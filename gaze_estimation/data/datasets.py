@@ -58,7 +58,8 @@ class MPIIFaceGazeDataset(Dataset):
             if self._train:
                 person_label_paths.pop(self._fold)
             else:
-                person_label_paths = person_label_paths[self._fold:self._fold+1]
+                # person_label_paths = person_label_paths[self._fold:self._fold+1]
+                pass
 
 
         for person_label_path in person_label_paths:
