@@ -1,4 +1,4 @@
-https://github.com/user-attachments/assets/439aea4a-fb98-4d7c-94eb-435d02b2bcc0
+https://github.com/user-attachments/assets/619f1e95-1137-4db4-9dde-c2ed3aaf3526
 
 # Thesis
 
